@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#title          :texwc
+#description    :Print word count for a LaTeX project.
+#author         :R. David Dunphy
+#date           :14/03/2018
+#version        :0.1
+#usage          :bash texwc [-h] [DIR]
+#notes          :Requires detex
+#==============================================================================
+
+TEX_EXT=".tex"
+INDEX_NAME=".texwc"
+IGNORE_ENVS="array,eqnearray,equation,figure,mathmatica,picture,table,verbatim,lstlisting"
+USAGE="Usage: `basename $0` [-h] [DIR]
+Print word count for a LaTeX project. Specify files to be included in the count as a list of relative file paths in an index file named $INDEX_NAME in your project root directory. Each path should be placed on a new line.
+
+    DIR         project root directory (default: current working directory)
+    -h, --help  display this message and exit
+"
+
+die() {
+    echo >&2 "$@"
+    echo "Enter `basename $0` -h for usage."
+    exit 1
+}
+
+if [ "$1" == "-h"  ]; then
+    echo "$USAGE"
+    exit 0
+fi
+
+[ "$#" -lt 2 ] || die "Error: 1 argument required, $# provided."
+
+root_dir="."
+root_name="current directory"
+if [ "$#" -eq 1 ]; then
+    root_dir=$1
+    root_name=$1
+fi
+index_file="$root_dir/$INDEX_NAME"
+tmp_dir=`mktemp -dt texwc.XXXXXXXXXX` || die "Error: Problem creating temporary directory."
+trap "{ rm -rf $tmp_dir; }" EXIT
+files=()
+
+[ -d "$root_dir" ] || die "Error: $root_name is not a directory."
+[ -f "$index_file" ] || die "Error: No $INDEX_NAME index file found in $root_name."
+
+while read -r line || [[ -n "$line" ]]; do
+    if [ -f "$line$TEX_EXT" ]; then
+        files+=("$line")
+    else
+        echo "Warning: No file named $line$TEX_EXT."
+    fi
+done < $index_file
+
+[ ! ${#files[@]} -eq 0 ] || die "Error: No TeX files found in $INDEX_NAME."
+
+for f in "${files[@]}"; do
+    mkdir -p `dirname "$tmp_dir/$f"`
+    detex -lne $IGNORE_ENVS "$root_dir/$f$TEX_EXT" > "$tmp_dir/$f"
+done
+
+cd $tmp_dir
+wc -w ${files[@]}
