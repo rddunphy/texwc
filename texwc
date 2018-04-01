@@ -27,9 +27,10 @@ class Colours:
 
 
 class Config:
-    def __init__(self, path, plain=True):
+    def __init__(self, path, plain=True, print_text=False):
         self.path = path
         self.plain = plain
+        self.print_text = print_text
 
 
 def _die(config, msg):
@@ -60,6 +61,22 @@ def _count_words(config, path):
             raise
 
 
+def _print_words(config, path, f_name):
+    try:
+        if not config.plain:
+            print("{0}Contents of {1}:{2}".format(
+                Colours.GREEN + Colours.BOLD, f_name, Colours.ENDC))
+        else:
+            print("Contents of {}:".format(f_name))
+        detex = subprocess.check_output(['detex', '-lne', IGNORE_ENVS, path])
+        print(detex.decode('utf-8'))
+    except OSError as e:
+        if e.errno == os.errno.ENOENT:
+            _die(config, "Detex not installed.")
+        else:
+            raise
+
+
 def _print_result_row(config, row, padding, colour=None):
     if config.plain or not colour:
         print("{{0:>{0}}} {{1:>{1}}} {{2:>{2}}} {{3:<{3}}}".format(
@@ -70,6 +87,8 @@ def _print_result_row(config, row, padding, colour=None):
 
 
 def _print_results(config, rows):
+    if config.print_text:
+        return
     total = [0, 0, 0, "TOTAL"]
     padding = [0, 0, 0, 0]
     for count in rows:
@@ -130,7 +149,10 @@ def texwc(config):
             msg = "No file named {} found.".format(f_name + TEX_EXT)
             _warn(config, msg)
         else:
-            counts.append(_count_words(config, f_path) + [f_name])
+            if config.print_text:
+                _print_words(config, f_path, f_name)
+            else:
+                counts.append(_count_words(config, f_path) + [f_name])
     _print_results(config, counts)
 
 
@@ -151,8 +173,13 @@ def parse_arguments():
         action='store_true',
         help="Turn off colour output"
     )
+    parser.add_argument(
+        '-p', '--print-text',
+        action='store_true',
+        help="Print output of detex instead of word count"
+    )
     args = parser.parse_args()
-    return Config(args.path, plain=args.plain)
+    return Config(args.path, plain=args.plain, print_text=args.print_text)
 
 
 if __name__ == '__main__':
