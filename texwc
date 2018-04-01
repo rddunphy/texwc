@@ -26,9 +26,9 @@ class Colours:
 
 
 class Config:
-    def __init__(self, args):
-        self.path = args.path
-        self.plain = args.plain
+    def __init__(self, path, plain=True):
+        self.path = path
+        self.plain = plain
 
 
 def _die(config, msg):
@@ -86,23 +86,35 @@ def _print_results(config, rows):
             _print_result_row(config, row, padding)
 
 
+def _load_index(path):
+    index = []
+    with open(os.path.join(path, INDEX_NAME)) as index_file:
+        for line in index_file.readlines():
+            f_name = line.strip()
+            if f_name.endswith(TEX_EXT):
+                f_name = '.'.join(f_name.split('.')[:-1])
+            index.append(f_name)
+    return index
+
+
 def texwc(config):
     path = config.path
     if not os.path.isdir(path):
         _die(config, "Please specify a root directory.")
     if INDEX_NAME not in os.listdir(path):
         _die(config, "No index file found in that directory.")
-    with open(os.path.join(path, INDEX_NAME)) as index:
-        counts = []
-        for f_name in index.readlines():
-            f_name = f_name.strip()
-            f_path = os.path.join(path, f_name + TEX_EXT)
-            if not os.path.isfile(f_path):
-                msg = "No file named {} found.".format(f_name + TEX_EXT)
-                _warn(config, msg)
-            else:
-                counts.append(_count_words(config, f_path) + [f_name])
-        _print_results(config, counts)
+    index = _load_index(path)
+    if not index:
+        _die(config, "No .tex files listed in index.")
+    counts = []
+    for f_name in index:
+        f_path = os.path.join(path, f_name + TEX_EXT)
+        if not os.path.isfile(f_path):
+            msg = "No file named {} found.".format(f_name + TEX_EXT)
+            _warn(config, msg)
+        else:
+            counts.append(_count_words(config, f_path) + [f_name])
+    _print_results(config, counts)
 
 
 def parse_arguments():
@@ -123,7 +135,7 @@ def parse_arguments():
         help="Turn off colour output"
     )
     args = parser.parse_args()
-    return Config(args)
+    return Config(args.path, plain=args.plain)
 
 
 if __name__ == '__main__':
