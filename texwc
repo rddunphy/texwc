@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 TEX_EXT = ".tex"
-INDEX_NAME = ".texwc"
+CONFIG_EXT = ".texwc"
 IGNORE_ENVS = "array,eqnearray,equation,figure,mathmatica,picture,table,\
 verbatim,lstlisting,sidewaystable"
 
@@ -75,7 +75,7 @@ def _print_results(config, rows):
     for count in rows:
         total[:-1] = [x + y for x, y in zip(total[:-1], count[:-1])]
     header = ["LINES", "WORDS", "CHARS", "FILE"]
-    rows = [header] + rows + [total]
+    rows = [header] + rows + [total] if len(rows) > 1 else [header] + rows
     for row in rows:
         padding = [max(x, len(str(y))) for x, y in zip(padding, row)]
     for r, row in enumerate(rows):
@@ -98,22 +98,34 @@ def _load_config_file(config, path):
         config.index = index
 
 
+def _config_paths(config):
+    path = config.path
+    if path.endswith(TEX_EXT):  # Word count on a single .tex file
+        if not os.path.isfile(path):
+            _die(config, "No .tex file with that name.")
+        config.path = os.path.dirname(path)
+        f_name = os.path.splitext(os.path.basename(path))[0]
+        config.index = [f_name]
+    else:  # Word count on index from a .texwc file
+        if path.endswith(CONFIG_EXT):
+            if not os.path.isfile(path):
+                _die(config, "No .texwc config file with that name.")
+            _load_config_file(config, path)
+            config.path = os.path.dirname(path)
+        else:  # Root directory specified
+            if not os.path.isdir(path):
+                _die(config, "No directory with that name.")
+            if CONFIG_EXT not in os.listdir(path):
+                _die(config, "No index file found in this directory.")
+            index_path = os.path.join(path, CONFIG_EXT)
+            _load_config_file(config, index_path)
+
+
 def texwc(config):
-    index_path = config.path
-    root_path = os.path.dirname(config.path)
-    if os.path.isdir(config.path):
-        if INDEX_NAME not in os.listdir(config.path):
-            _die(config, "No index file found in that directory.")
-        index_path = os.path.join(config.path, INDEX_NAME)
-        root_path = config.path
-    elif not os.path.isfile(config.path):
-        _die(config, "Please specify a root directory.")
-    _load_config_file(config, index_path)
-    if not config.index:
-        _die(config, "No .tex files listed in index.")
+    _config_paths(config)
     counts = []
     for f_name in config.index:
-        f_path = os.path.join(root_path, f_name + TEX_EXT)
+        f_path = os.path.join(config.path, f_name + TEX_EXT)
         if not os.path.isfile(f_path):
             msg = "No file named {} found.".format(f_name + TEX_EXT)
             _warn(config, msg)
