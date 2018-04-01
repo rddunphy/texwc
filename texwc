@@ -87,7 +87,7 @@ def _print_results(config, rows):
             _print_result_row(config, row, padding)
 
 
-def _load_index(path):
+def _load_config_file(config, path):
     with open(path) as index_file:
         obj = json.load(index_file)
         index = []
@@ -95,7 +95,7 @@ def _load_index(path):
             if f_path.endswith(TEX_EXT):
                 f_path = os.path.splitext(f_path)[0]
             index.append(f_path)
-        return index
+        config.index = index
 
 
 def texwc(config):
@@ -108,11 +108,11 @@ def texwc(config):
         root_path = config.path
     elif not os.path.isfile(config.path):
         _die(config, "Please specify a root directory.")
-    index = _load_index(index_path)
-    if not index:
+    _load_config_file(config, index_path)
+    if not config.index:
         _die(config, "No .tex files listed in index.")
     counts = []
-    for f_name in index:
+    for f_name in config.index:
         f_path = os.path.join(root_path, f_name + TEX_EXT)
         if not os.path.isfile(f_path):
             msg = "No file named {} found.".format(f_name + TEX_EXT)
