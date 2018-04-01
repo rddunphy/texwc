@@ -27,10 +27,11 @@ class Colours:
 
 
 class Config:
-    def __init__(self, path, plain=True, print_text=False):
+    def __init__(self, path, plain=True, print_text=False, init=False):
         self.path = path
         self.plain = plain
         self.print_text = print_text
+        self.init = init
 
 
 def _die(config, msg):
@@ -69,7 +70,7 @@ def _print_words(config, path, f_name):
         else:
             print("Contents of {}:".format(f_name))
         detex = subprocess.check_output(['detex', '-lne', IGNORE_ENVS, path])
-        print(detex.decode('utf-8'))
+        print(detex.decode('utf-8', 'backslashreplace'))
     except OSError as e:
         if e.errno == os.errno.ENOENT:
             _die(config, "Detex not installed.")
@@ -136,11 +137,40 @@ def _config_paths(config):
                 _die(config, "No directory with that name.")
             if CONFIG_EXT not in os.listdir(path):
                 _die(config, "No index file found in this directory.")
-            index_path = os.path.join(path, CONFIG_EXT)
-            _load_config_file(config, index_path)
+            config_path = os.path.join(path, CONFIG_EXT)
+            _load_config_file(config, config_path)
+
+
+def _confirm(msg, default_yes=True):
+    if default_yes:
+        msg += " (Y/n) "
+    else:
+        msg += " (y/N) "
+    print(msg, end='')
+    inp = input()
+    return inp in ['y', 'Y'] or (default_yes and inp not in ['n', 'N'])
+
+
+def _init(config):
+    path = config.path
+    if not os.path.isdir(path):
+        _die(config, "No directory with that name.")
+    index = [x for x in os.listdir(path) if x.endswith(TEX_EXT)]
+    if not index:
+        _die(config, "No .tex files found in this directory.")
+    index = sorted(index)
+    print("Initialising .texwc with {} .tex files...".format(len(index)))
+    config_path = os.path.join(path, CONFIG_EXT)
+    if os.path.exists(config_path):
+        if not _confirm("Config file already exists. Overwrite?"):
+            exit(0)
+    with open(config_path, 'w') as f:
+        json.dump({"files": index}, f)
 
 
 def texwc(config):
+    if config.init:
+        _init(config)
     _config_paths(config)
     counts = []
     for f_name in config.index:
@@ -178,8 +208,14 @@ def parse_arguments():
         action='store_true',
         help="Print output of detex instead of word count"
     )
+    parser.add_argument(
+        '-i', '--init',
+        action='store_true',
+        help="Initialise directory with a default config file"
+    )
     args = parser.parse_args()
-    return Config(args.path, plain=args.plain, print_text=args.print_text)
+    return Config(args.path, plain=args.plain, print_text=args.print_text,
+                  init=args.init)
 
 
 if __name__ == '__main__':

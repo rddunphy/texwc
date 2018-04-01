@@ -10,6 +10,7 @@ Put `texwc` on your path (e.g. `~/bin`).
 ## Usage
 * From the terminal, run `texwc [path]`, where `path` is the path of a `.tex` file.
 * To get a word count from multiple files, specify the path of a `.texwc` config file for `path`, or the path of a directory containing a config file. If no value is specified for `path`, the current working directory is used.
+* Config files can be generated with the `-i` option (see below for details).
 * The output will show line, word and character counts for each specified file as well as a total:
   ```
   $ texwc report/.texwc
@@ -26,11 +27,12 @@ Put `texwc` on your path (e.g. `~/bin`).
 ## Options
 The following options can be specified to modify the behaviour of the script:
 * `-h`/`--help`: Print help message with usage information.
-* `--plain`: Print in plain text, without formatting by ANSI escape sequences.
+* `-i`/`--init`: Initialise directory with a default config file containing all `.tex` files in this directory.
 * `-p`/`--print-text`: Print output of `detex` instead of word count. This can be useful to ensure that the correct text is included in the word count, e.g. that the right environments are being ignored.
+* `--plain`: Print in plain text, without formatting by ANSI escape sequences.
 
 ## Config file
-The texwc config file contains a JSON object representing configuration options. Automatic generation of config files is coming.
+A texwc config file contains a JSON object representing configuration options.
 
 JSON fields in a config file:
 * `"files"` (required): a list of relative `.tex` file paths to be included in the word count.
