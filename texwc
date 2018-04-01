@@ -1,64 +1,130 @@
-#!/usr/bin/env bash
-#title          :texwc
-#description    :Print word count for a LaTeX project.
-#author         :R. David Dunphy
-#date           :14/03/2018
-#version        :0.1
-#usage          :bash texwc [-h] [DIR]
-#notes          :Requires detex
-#==============================================================================
+#!/usr/bin/env python3
+"""Print word count for a LaTeX project.
 
-TEX_EXT=".tex"
-INDEX_NAME=".texwc"
-IGNORE_ENVS="array,eqnearray,equation,figure,mathmatica,picture,table,verbatim,lstlisting"
-USAGE="Usage: `basename $0` [-h] [DIR]
-Print word count for a LaTeX project. Specify files to be included in the count as a list of relative file paths in an index file named $INDEX_NAME in your project root directory. Each path should be placed on a new line.
+Specify files to be included in the count as a list of relative file paths in
+an index file in your project root directory. Each path should be placed on a
+new line.
+"""
 
-    DIR         project root directory (default: current working directory)
-    -h, --help  display this message and exit
-"
+import argparse
+import os
+import subprocess
+import sys
 
-die() {
-    echo >&2 "$@"
-    echo "Enter `basename $0` -h for usage."
-    exit 1
-}
+TEX_EXT = ".tex"
+INDEX_NAME = ".texwc"
+IGNORE_ENVS = "array,eqnearray,equation,figure,mathmatica,picture,table,\
+verbatim,lstlisting,sidewaystable"
 
-if [ "$1" == "-h"  ]; then
-    echo "$USAGE"
-    exit 0
-fi
 
-[ "$#" -lt 2 ] || die "Error: 1 argument required, $# provided."
+class Colours:
+    BOLD = '\033[1m'
+    WARN = '\033[93m'
+    ERR = '\033[91m'
+    GREEN = '\033[92m'
+    ENDC = '\033[0m'
 
-root_dir="."
-root_name="current directory"
-if [ "$#" -eq 1 ]; then
-    root_dir=$1
-    root_name=$1
-fi
-index_file="$root_dir/$INDEX_NAME"
-tmp_dir=`mktemp -dt texwc.XXXXXXXXXX` || die "Error: Problem creating temporary directory."
-trap "{ rm -rf $tmp_dir; }" EXIT
-files=()
 
-[ -d "$root_dir" ] || die "Error: $root_name is not a directory."
-[ -f "$index_file" ] || die "Error: No $INDEX_NAME index file found in $root_name."
+class Config:
+    def __init__(self, args):
+        self.path = args.path
+        self.plain = args.plain
 
-while read -r line || [[ -n "$line" ]]; do
-    if [ -f "$line$TEX_EXT" ]; then
-        files+=("$line")
-    else
-        echo "Warning: No file named $line$TEX_EXT."
-    fi
-done < $index_file
 
-[ ! ${#files[@]} -eq 0 ] || die "Error: No TeX files found in $INDEX_NAME."
+def _die(config, msg):
+    msg = "Error: {}".format(msg)
+    if not config.plain:
+        msg = Colours.ERR + msg + Colours.ENDC
+    print(msg, file=sys.stderr)
+    exit(1)
 
-for f in "${files[@]}"; do
-    mkdir -p `dirname "$tmp_dir/$f"`
-    detex -lne $IGNORE_ENVS "$root_dir/$f$TEX_EXT" > "$tmp_dir/$f"
-done
 
-cd $tmp_dir
-wc -w ${files[@]}
+def _warn(config, msg):
+    msg = "Warning: {}".format(msg)
+    if not config.plain:
+        msg = Colours.WARN + msg + Colours.ENDC
+    print(msg, file=sys.stderr)
+
+
+def _count_words(config, path):
+    try:
+        detex = subprocess.Popen(['detex', '-lne', IGNORE_ENVS, path],
+                                 stdout=subprocess.PIPE)
+        wc = subprocess.check_output(['wc'], stdin=detex.stdout)
+        return [int(x) for x in wc.split()[0:3]]
+    except OSError as e:
+        if e.errno == os.errno.ENOENT:
+            _die(config, "Detex not installed.")
+        else:
+            raise
+
+
+def _print_result_row(config, row, padding, colour=None):
+    if config.plain or not colour:
+        print("{{0:>{0}}} {{1:>{1}}} {{2:>{2}}} {{3:<{3}}}".format(
+            *padding).format(*row))
+    else:
+        print("{0}{{0:>{1}}} {{1:>{2}}} {{2:>{3}}} {{3:<{4}}}{5}".format(
+            colour, *padding, Colours.ENDC).format(*row))
+
+
+def _print_results(config, rows):
+    total = [0, 0, 0, "TOTAL"]
+    padding = [0, 0, 0, 0]
+    for count in rows:
+        total[:-1] = [x + y for x, y in zip(total[:-1], count[:-1])]
+    header = ["LINES", "WORDS", "CHARS", "FILE"]
+    rows = [header] + rows + [total]
+    for row in rows:
+        padding = [max(x, len(str(y))) for x, y in zip(padding, row)]
+    for r, row in enumerate(rows):
+        if r == 0:
+            _print_result_row(config, row, padding, Colours.BOLD)
+        elif r == len(rows) - 1:
+            _print_result_row(config, row, padding, Colours.GREEN)
+        else:
+            _print_result_row(config, row, padding)
+
+
+def texwc(config):
+    path = config.path
+    if not os.path.isdir(path):
+        _die(config, "Please specify a root directory.")
+    if INDEX_NAME not in os.listdir(path):
+        _die(config, "No index file found in that directory.")
+    with open(os.path.join(path, INDEX_NAME)) as index:
+        counts = []
+        for f_name in index.readlines():
+            f_name = f_name.strip()
+            f_path = os.path.join(path, f_name + TEX_EXT)
+            if not os.path.isfile(f_path):
+                msg = "No file named {} found.".format(f_name + TEX_EXT)
+                _warn(config, msg)
+            else:
+                counts.append(_count_words(config, f_path) + [f_name])
+        _print_results(config, counts)
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        usage="%(prog)s [-h] [path] [options]"
+    )
+    parser.add_argument(
+        'path',
+        type=str,
+        nargs='?',
+        default=os.getcwd(),
+        help="Root directory"
+    )
+    parser.add_argument(
+        '--plain',
+        action='store_true',
+        help="Turn off colour output"
+    )
+    args = parser.parse_args()
+    return Config(args)
+
+
+if __name__ == '__main__':
+    texwc(parse_arguments())
