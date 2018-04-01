@@ -4,13 +4,13 @@ A simple command line script for getting a more accurate word count on LaTeX pro
 ## Installation and usage
 * Put `texwc` on your path (e.g. `~/bin`).
 * From the terminal, run `texwc [path]`, where `path` is the path of a `.tex` file.
-* To get a word count from multiple files, specify the path of a `.texwc` config file for `path`, or the path of a directory containing a config file. If `path`, the current working directory is used.
+* To get a word count from multiple files, specify the path of a `.texwc` config file for `path`, or the path of a directory containing a config file. If no value is specified for `path`, the current working directory is used.
 
 ## Dependencies
 `detex` (`sudo apt install texlive-extra-utils`, or see [OpenDetex](https://github.com/yjkimjunior/opendetex) for a more recent version)
 
 ## Config file
-The config file contains a JSON object representing configuration options. Automatic generation of config files is coming.
+The texwc config file contains a JSON object representing configuration options. Automatic generation of config files is coming.
 
-Configuration options are:
+JSON fields in a config file:
 * `"files"` (required): a list of relative `.tex` file paths to be included in the word count.
