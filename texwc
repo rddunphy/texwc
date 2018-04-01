@@ -111,6 +111,8 @@ def _load_config_file(config, path):
     with open(path) as index_file:
         obj = json.load(index_file)
         index = []
+        if "files" not in obj or not obj["files"]:
+            _die(config, "Invalid config file (no \"files\" specified).")
         for f_path in obj["files"]:
             if f_path.endswith(TEX_EXT):
                 f_path = os.path.splitext(f_path)[0]
