@@ -7,6 +7,7 @@ new line.
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -87,14 +88,14 @@ def _print_results(config, rows):
 
 
 def _load_index(path):
-    index = []
     with open(path) as index_file:
-        for line in index_file.readlines():
-            f_name = line.strip()
-            if f_name.endswith(TEX_EXT):
-                f_name = os.path.splitext(f_name)[0]
-            index.append(f_name)
-    return index
+        obj = json.load(index_file)
+        index = []
+        for f_path in obj["files"]:
+            if f_path.endswith(TEX_EXT):
+                f_path = os.path.splitext(f_path)[0]
+            index.append(f_path)
+        return index
 
 
 def texwc(config):
