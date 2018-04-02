@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Print word count for a LaTeX project.
 
-Specify files to be included in the count as a list of relative file paths in
-an index file in your project root directory. Each path should be placed on a
-new line.
+Specify a .tex file or use a .texwc config file to specify multiple files. Use
+--init to create a config file. By default, \\input and \\include commands are
+ignored. Use --with-includes to expand them.
 """
 
 import argparse
@@ -28,12 +28,13 @@ class Colours():
 
 class Config:
     def __init__(self, path, plain=False, print_text=False, init=False,
-                 recursive=False):
+                 recursive=False, includes=False):
         self.path = path
         self.plain = plain
         self.print_text = print_text
         self.init = init
         self.recursive = recursive
+        self.includes = includes
 
 
 def _die(config, msg):
@@ -52,8 +53,9 @@ def _warn(config, msg):
 
 
 def _count_words(config, path):
+    dt_opts = '-l' if config.includes else '-ln'
     try:
-        detex = subprocess.Popen(['detex', '-lne', IGNORE_ENVS, path],
+        detex = subprocess.Popen(['detex', dt_opts, '-e', IGNORE_ENVS, path],
                                  stdout=subprocess.PIPE)
         wc = subprocess.check_output(['wc'], stdin=detex.stdout)
         return [int(x) for x in wc.split()[0:3]]
@@ -174,7 +176,6 @@ def _init(config):
     index = _get_tex_files_in_dir(path, config.recursive)
     if not index:
         _die(config, "No .tex files found in this directory.")
-    index = sorted(index)
     print("Initialising .texwc with {} .tex files...".format(len(index)))
     config_path = os.path.join(path, CONFIG_EXT)
     if os.path.exists(config_path):
@@ -189,11 +190,13 @@ def texwc(config):
     if config.init:
         _init(config)
     _config_paths(config)
+    if config.path:
+        os.chdir(config.path)
     counts = []
     for f_name in config.index:
-        f_path = os.path.join(config.path, f_name + TEX_EXT)
+        f_path = f_name + TEX_EXT
         if not os.path.isfile(f_path):
-            msg = "No file named {} found.".format(f_name + TEX_EXT)
+            msg = "No file named {} found.".format(f_path)
             _warn(config, msg)
         else:
             if config.print_text:
@@ -213,31 +216,37 @@ def parse_arguments():
         type=str,
         nargs='?',
         default=os.getcwd(),
-        help="Root directory or config file path"
-    )
-    parser.add_argument(
-        '--plain',
-        action='store_true',
-        help="Turn off colour output"
-    )
-    parser.add_argument(
-        '-p', '--print-text',
-        action='store_true',
-        help="Print output of detex instead of word count"
+        help="path of a .tex file, a .texwc config file, or a root directory"
     )
     parser.add_argument(
         '-i', '--init',
         action='store_true',
-        help="Initialise directory with a default config file"
+        help="initialise directory with a default config file"
     )
     parser.add_argument(
         '-r', '--recursive',
         action='store_true',
-        help="Recursively add .tex files in subdirectories to config file"
+        help="recursively add .tex files in subdirectories to config file"
+    )
+    parser.add_argument(
+        '-w', '--with-includes',
+        action='store_true',
+        help="expand \\input and \\include commands"
+    )
+    parser.add_argument(
+        '-p', '--print-text',
+        action='store_true',
+        help="print output of detex instead of word count"
+    )
+    parser.add_argument(
+        '--plain',
+        action='store_true',
+        help="turn off colour output"
     )
     args = parser.parse_args()
     return Config(args.path, plain=args.plain, print_text=args.print_text,
-                  init=args.init, recursive=args.recursive)
+                  init=args.init, recursive=args.recursive,
+                  includes=args.with_includes)
 
 
 if __name__ == '__main__':
