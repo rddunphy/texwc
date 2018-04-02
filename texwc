@@ -18,7 +18,7 @@ IGNORE_ENVS = "array,eqnearray,equation,figure,mathmatica,picture,table,\
 verbatim,lstlisting,sidewaystable"
 
 
-class Colours:
+class Colours():
     BOLD = '\033[1m'
     WARN = '\033[93m'
     ERR = '\033[91m'
@@ -27,11 +27,13 @@ class Colours:
 
 
 class Config:
-    def __init__(self, path, plain=True, print_text=False, init=False):
+    def __init__(self, path, plain=False, print_text=False, init=False,
+                 recursive=False):
         self.path = path
         self.plain = plain
         self.print_text = print_text
         self.init = init
+        self.recursive = recursive
 
 
 def _die(config, msg):
@@ -153,18 +155,31 @@ def _confirm(msg, default_yes=True):
     return inp in ['y', 'Y'] or (default_yes and inp not in ['n', 'N'])
 
 
+def _get_tex_files_in_dir(path, recursive):
+    index = []
+    for f in os.listdir(path):
+        f_path = os.path.join(path, f)
+        if f.endswith(TEX_EXT):
+            index.append(f)
+        elif recursive and os.path.isdir(f_path):
+            sd_files = _get_tex_files_in_dir(f_path, recursive)
+            index += [os.path.join(f, x) for x in sd_files]
+    return index
+
+
 def _init(config):
     path = config.path
     if not os.path.isdir(path):
         _die(config, "No directory with that name.")
-    index = [x for x in os.listdir(path) if x.endswith(TEX_EXT)]
+    index = _get_tex_files_in_dir(path, config.recursive)
     if not index:
         _die(config, "No .tex files found in this directory.")
     index = sorted(index)
     print("Initialising .texwc with {} .tex files...".format(len(index)))
     config_path = os.path.join(path, CONFIG_EXT)
     if os.path.exists(config_path):
-        if not _confirm("Config file already exists. Overwrite?"):
+        if not _confirm("Config file already exists. Overwrite?",
+                        default_yes=False):
             exit(0)
     with open(config_path, 'w') as f:
         json.dump({"files": index}, f)
@@ -215,9 +230,14 @@ def parse_arguments():
         action='store_true',
         help="Initialise directory with a default config file"
     )
+    parser.add_argument(
+        '-r', '--recursive',
+        action='store_true',
+        help="Recursively add .tex files in subdirectories to config file"
+    )
     args = parser.parse_args()
     return Config(args.path, plain=args.plain, print_text=args.print_text,
-                  init=args.init)
+                  init=args.init, recursive=args.recursive)
 
 
 if __name__ == '__main__':
