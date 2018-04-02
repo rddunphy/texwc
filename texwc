@@ -164,7 +164,7 @@ def _get_tex_files_in_dir(path, recursive):
         elif recursive and os.path.isdir(f_path):
             sd_files = _get_tex_files_in_dir(f_path, recursive)
             index += [os.path.join(f, x) for x in sd_files]
-    return index
+    return sorted(index)
 
 
 def _init(config):
@@ -182,7 +182,7 @@ def _init(config):
                         default_yes=False):
             exit(0)
     with open(config_path, 'w') as f:
-        json.dump({"files": index}, f)
+        json.dump({"files": index}, f, indent=4)
 
 
 def texwc(config):
