@@ -14,7 +14,7 @@ import sys
 
 TEX_EXT = ".tex"
 CONFIG_EXT = ".texwc"
-IGNORE_ENVS = ["array", "eqnearray", "equation", "figure", "mathmatica",
+IGNORE_ENVS = ["array", "eqnarray", "equation", "figure", "mathmatica",
                "picture", "table", "verbatim", "lstlisting", "sidewaystable"]
 DEFAULT_DETEX_OPTS = ["-l", "-n"]
 
