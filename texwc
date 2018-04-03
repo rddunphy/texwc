@@ -14,8 +14,9 @@ import sys
 
 TEX_EXT = ".tex"
 CONFIG_EXT = ".texwc"
-IGNORE_ENVS = ["array", "eqnarray", "equation", "figure", "mathmatica",
-               "picture", "table", "verbatim", "lstlisting", "sidewaystable"]
+DEFAULT_IGNORE_ENVS = ["array", "eqnarray", "equation", "figure", "mathmatica",
+                       "picture", "table", "verbatim", "lstlisting",
+                       "sidewaystable"]
 DEFAULT_DETEX_OPTS = ["-l", "-n"]
 
 
@@ -38,6 +39,7 @@ class Config:
         self.includes = includes
         self.files = []
         self.detex_opts = DEFAULT_DETEX_OPTS
+        self.ignore_envs = DEFAULT_IGNORE_ENVS
 
 
 def _die(config, msg):
@@ -56,7 +58,7 @@ def _warn(config, msg):
 
 
 def _detex_cmd(config, path):
-    envs_str = ",".join(IGNORE_ENVS)
+    envs_str = ",".join(config.ignore_envs)
     cmd = ["detex", "-e", envs_str]
     cmd += config.detex_opts
     if config.includes and "-n" in cmd:
@@ -136,6 +138,8 @@ def _load_config_file(config, path):
         config.index = index
         if "detex-options" in obj:
             config.detex_opts = obj["detex-options"]
+        if "ignore-envs" in obj:
+            config.ignore_envs = obj["ignore-envs"]
 
 
 def _config_paths(config):
@@ -189,6 +193,7 @@ def _config_json(config, index):
         detex_opts.remove("-n")
     return {
         "detex-options": detex_opts,
+        "ignore-envs": DEFAULT_IGNORE_ENVS,
         "files": index
     }
 

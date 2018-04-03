@@ -38,5 +38,6 @@ The following options can be specified to modify the behaviour of the script:
 A texwc config file contains a JSON object representing configuration options.
 
 JSON fields in a config file:
-* `"files"` (required): a list of relative `.tex` file paths to be included in the word count.
-* `"detex-options"`: a list of options to be passed to `detex`. See the [`detex` documentation](https://www.systutorials.com/docs/linux/man/1-detex/) for details.
+* `"files"` (required): A list of relative `.tex` file paths to be included in the word count.
+* `"detex-options"`: A list of options to be passed to `detex`. See the `detex` [documentation](https://www.systutorials.com/docs/linux/man/1-detex/) for details.
+* `"ignore-envs"`: A list of environments to exclude from the word count.
