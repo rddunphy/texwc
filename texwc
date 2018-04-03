@@ -14,8 +14,9 @@ import sys
 
 TEX_EXT = ".tex"
 CONFIG_EXT = ".texwc"
-IGNORE_ENVS = "array,eqnearray,equation,figure,mathmatica,picture,table,\
-verbatim,lstlisting,sidewaystable"
+IGNORE_ENVS = ["array", "eqnearray", "equation", "figure", "mathmatica",
+               "picture", "table", "verbatim", "lstlisting", "sidewaystable"]
+DEFAULT_DETEX_OPTS = ["-l", "-n"]
 
 
 class Colours():
@@ -35,6 +36,8 @@ class Config:
         self.init = init
         self.recursive = recursive
         self.includes = includes
+        self.files = []
+        self.detex_opts = DEFAULT_DETEX_OPTS
 
 
 def _die(config, msg):
@@ -52,10 +55,19 @@ def _warn(config, msg):
     print(msg, file=sys.stderr)
 
 
+def _detex_cmd(config, path):
+    envs_str = ",".join(IGNORE_ENVS)
+    cmd = ["detex", "-e", envs_str]
+    cmd += config.detex_opts
+    if config.includes and "-n" in cmd:
+        cmd.remove("-n")
+    cmd.append(path)
+    return cmd
+
+
 def _count_words(config, path):
-    dt_opts = '-l' if config.includes else '-ln'
     try:
-        detex = subprocess.Popen(['detex', dt_opts, '-e', IGNORE_ENVS, path],
+        detex = subprocess.Popen(_detex_cmd(config, path),
                                  stdout=subprocess.PIPE)
         wc = subprocess.check_output(['wc'], stdin=detex.stdout)
         return [int(x) for x in wc.split()[0:3]]
@@ -73,7 +85,7 @@ def _print_words(config, path, f_name):
                 Colours.GREEN + Colours.BOLD, f_name, Colours.ENDC))
         else:
             print("Contents of {}:".format(f_name))
-        detex = subprocess.check_output(['detex', '-lne', IGNORE_ENVS, path])
+        detex = subprocess.check_output(_detex_cmd(config, path))
         print(detex.decode('utf-8', 'backslashreplace'))
     except OSError as e:
         if e.errno == os.errno.ENOENT:
@@ -122,6 +134,8 @@ def _load_config_file(config, path):
                 f_path = os.path.splitext(f_path)[0]
             index.append(f_path)
         config.index = index
+        if "detex-options" in obj:
+            config.detex_opts = obj["detex-options"]
 
 
 def _config_paths(config):
@@ -169,6 +183,16 @@ def _get_tex_files_in_dir(path, recursive):
     return sorted(index)
 
 
+def _config_json(config, index):
+    detex_opts = DEFAULT_DETEX_OPTS
+    if config.includes:
+        detex_opts.remove("-n")
+    return {
+        "detex-options": detex_opts,
+        "files": index
+    }
+
+
 def _init(config):
     path = config.path
     if not os.path.isdir(path):
@@ -183,7 +207,7 @@ def _init(config):
                         default_yes=False):
             exit(0)
     with open(config_path, 'w') as f:
-        json.dump({"files": index}, f, indent=4)
+        json.dump(_config_json(config, index), f, indent=4)
 
 
 def texwc(config):

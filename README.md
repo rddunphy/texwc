@@ -30,7 +30,7 @@ The following options can be specified to modify the behaviour of the script:
 * `-h`/`--help`: Print help message with usage information.
 * `-i`/`--init`: Initialise directory with a default config file containing all `.tex` files in this directory.
 * `-r`/`--recursive`: Recursively include files in subdirectories when initialising (only with `-i`).
-* `-w`/`--with-includes`: Expand \\input and \\include commands.
+* `-w`/`--with-includes`: Expand \\input and \\include commands. (This takes precedence over `detex-options`.)
 * `-p`/`--print-text`: Print output of `detex` instead of word count. This can be useful to ensure that the correct text is included in the word count, e.g. that the right environments are being ignored.
 * `--plain`: Print in plain text, without formatting by ANSI escape sequences.
 
@@ -39,3 +39,4 @@ A texwc config file contains a JSON object representing configuration options.
 
 JSON fields in a config file:
 * `"files"` (required): a list of relative `.tex` file paths to be included in the word count.
+* `"detex-options"`: a list of options to be passed to detex. See the [detex documentation](https://www.systutorials.com/docs/linux/man/1-detex/) for details.
