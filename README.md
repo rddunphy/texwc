@@ -11,10 +11,10 @@ Put `texwc` on your path (e.g. `~/bin`).
 * From the terminal, run `texwc [path]`, where `path` is the path of a `.tex` file.
 * To get a word count from multiple files, specify the path of a `.texwc` config file for `path`, or the path of a directory containing a config file. If no value is specified for `path`, the current working directory is used.
 * Config files can be generated with the `-i` option (see below for details).
-* By default, \\input and \\include commands are ignored. This is to allow contol over which included files should be counted (e.g. appendices are usually not included in a word count). To expand these commands, use the `--with-includes` option.
+* By default, the `\input` and `\include` LaTeX commands are ignored. This is to allow control over which included files should be counted (e.g., appendices and title pages are usually not included in a word count). To expand these commands, use the `--with-includes` option.
 * The output will show line, word and character counts for each specified file as well as a total:
   ```
-  $ texwc report/.texwc
+  $ texwc
   LINES WORDS CHARS FILE
      35   595  3965 chapters/01_introduction
     285  5370 33619 chapters/02_background
@@ -29,15 +29,41 @@ Put `texwc` on your path (e.g. `~/bin`).
 The following options can be specified to modify the behaviour of the script:
 * `-h`/`--help`: Print help message with usage information.
 * `-i`/`--init`: Initialise directory with a default config file containing all `.tex` files in this directory.
-* `-r`/`--recursive`: Recursively include files in subdirectories when initialising (only with `-i`).
-* `-w`/`--with-includes`: Expand \\input and \\include commands. (This takes precedence over `detex-options`.)
+* `-r`/`--recursive`: Recursively include `.tex` files in subdirectories when initialising (only with `-i`).
+* `-w`/`--with-includes`: Expand `\input` and `\include` commands. (This takes precedence over `detex-options`.)
 * `-p`/`--print-text`: Print output of `detex` instead of word count. This can be useful to ensure that the correct text is included in the word count, e.g. that the right environments are being ignored.
 * `--plain`: Print in plain text, without formatting by ANSI escape sequences.
 
 ## Config file
-A texwc config file contains a JSON object representing configuration options.
-
-JSON fields in a config file:
+A `.texwc` config file contains a JSON object representing configuration options. The fields of this file are:
 * `"files"` (required): A list of relative `.tex` file paths to be included in the word count.
 * `"detex-options"`: A list of options to be passed to `detex`. See the `detex` [documentation](https://www.systutorials.com/docs/linux/man/1-detex/) for details.
-* `"ignore-envs"`: A list of environments to exclude from the word count.
+* `"ignore-envs"`: A list of environments to exclude from the word count. (Please note that `detex` only allows 10 environments to be included in this list, so you may need to remove environments you don't use.)
+
+Here is an example of a typical `.texwc` file:
+```json
+{
+    "detex-options": [
+        "-l",
+        "-n"
+    ],
+    "ignore-envs": [
+        "array",
+        "eqnarray",
+        "equation",
+        "figure",
+        "table",
+        "verbatim",
+        "lstlisting",
+        "sidewaystable"
+    ],
+    "files": [
+        "chapters/01_introduction",
+        "chapters/02_background",
+        "chapters/03_methodology",
+        "chapters/04_implementation",
+        "chapters/05_results",
+        "chapters/06_conclusion"
+    ]
+}
+```

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Print word count for a LaTeX project.
+r"""Print word count for a LaTeX project.
 
 Specify a .tex file or use a .texwc config file to specify multiple files. Use
---init to create a config file. By default, \\input and \\include commands are
+--init to create a config file. By default, \input and \include commands are
 ignored. Use --with-includes to expand them.
 """
 
@@ -12,15 +12,24 @@ import os
 import subprocess
 import sys
 
+__author__ = "R. David Dunphy"
+__copyright__ = "Copyright 2018, R. David Dunphy"
+__license__ = "MIT"
+__version__ = "0.1.0"
+__maintainer__ = "R. David Dunphy"
+__email__ = "rdd.dunphy@gmail.com"
+__status__ = "Development"
+
 TEX_EXT = ".tex"
 CONFIG_EXT = ".texwc"
-DEFAULT_IGNORE_ENVS = ["array", "eqnarray", "equation", "figure", "mathmatica",
-                       "picture", "table", "verbatim", "lstlisting",
-                       "sidewaystable"]
+DEFAULT_IGNORE_ENVS = ["array", "eqnarray", "equation", "figure", "table",
+                       "verbatim", "lstlisting"]
 DEFAULT_DETEX_OPTS = ["-l", "-n"]
 
 
 class Colours():
+    """ANSI escape sequence constants for colour formatting."""
+
     BOLD = '\033[1m'
     WARN = '\033[93m'
     ERR = '\033[91m'
@@ -29,8 +38,11 @@ class Colours():
 
 
 class Config:
+    """Container for configurations for a texwc run."""
+
     def __init__(self, path, plain=False, print_text=False, init=False,
                  recursive=False, includes=False):
+        """Create configuration instance."""
         self.path = path
         self.plain = plain
         self.print_text = print_text
@@ -216,6 +228,7 @@ def _init(config):
 
 
 def texwc(config):
+    """Load index from config.path and calculate and print word counts."""
     if config.init:
         _init(config)
     _config_paths(config)
@@ -235,9 +248,12 @@ def texwc(config):
     _print_results(config, counts)
 
 
-def parse_arguments():
+def _parse_arguments():
     parser = argparse.ArgumentParser(
         description=__doc__,
+        epilog=("Texwc was created by R. David Dunphy and is released under "
+                "the open-source MIT licence. For more information or to file "
+                "a bug report, go to https://github.com/rddunphy/texwc."),
         usage="%(prog)s [-h] [path] [options]"
     )
     parser.add_argument(
@@ -279,4 +295,4 @@ def parse_arguments():
 
 
 if __name__ == '__main__':
-    texwc(parse_arguments())
+    texwc(_parse_arguments())
